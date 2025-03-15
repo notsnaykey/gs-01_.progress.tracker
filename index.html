@@ -1,0 +1,1151 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>LLM Testing Progress Tracker</title>
+    <style>
+        :root {
+            --bg-main: #1e1e2e;
+            --bg-card: #2a2a3c;
+            --bg-hover: #34344a;
+            --bg-active: #3c3c56;
+            --text-primary: #e2e2e2;
+            --text-secondary: #a0a0a0;
+            --text-muted: #7a7a8c;
+            --border-color: #3a3a50;
+            --accent-blue: #5c85de;
+            --accent-blue-hover: #7095e6;
+            --accent-green: #26a769;
+            --accent-red: #e55c5c;
+            --progress-bg: #3a3a50;
+            --direct-bg: #5c6bc0;
+            --indirect-bg: #7986cb;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            line-height: 1.3;
+            color: var(--text-primary);
+            background-color: var(--bg-main);
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 8px;
+            font-size: 13px;
+        }
+        h1 {
+            text-align: center;
+            margin: 8px 0;
+            font-size: 20px;
+            color: var(--text-primary);
+        }
+        .overall-progress {
+            background-color: var(--bg-card);
+            border-radius: 4px;
+            padding: 6px;
+            margin-bottom: 8px;
+            display: flex;
+            align-items: center;
+            flex-wrap: wrap;
+            border: 1px solid var(--border-color);
+        }
+        .progress-header {
+            display: flex;
+            align-items: center;
+            margin-right: 12px;
+        }
+        .progress-header h2 {
+            margin: 0;
+            font-size: 15px;
+            margin-right: 8px;
+            color: var(--text-primary);
+        }
+        .progress-bar-container {
+            flex: 1;
+            background-color: var(--progress-bg);
+            height: 10px;
+            border-radius: 5px;
+            overflow: hidden;
+            min-width: 150px;
+            margin: 0 8px;
+        }
+        .progress-bar {
+            height: 100%;
+            background-color: var(--accent-blue);
+            border-radius: 5px;
+            transition: width 0.3s ease;
+        }
+        .progress-stats {
+            white-space: nowrap;
+            font-size: 12px;
+            color: var(--text-secondary);
+        }
+        .top-controls {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 8px;
+            align-items: center;
+        }
+        .search-container {
+            flex: 1;
+            margin-right: 8px;
+        }
+        #searchInput {
+            width: 100%;
+            padding: 5px 8px;
+            border: 1px solid var(--border-color);
+            border-radius: 4px;
+            font-size: 13px;
+            background-color: var(--bg-card);
+            color: var(--text-primary);
+        }
+        .update-models-btn {
+            background-color: var(--accent-blue);
+            color: var(--text-primary);
+            border: none;
+            padding: 5px 10px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 13px;
+            white-space: nowrap;
+        }
+        .update-models-btn:hover {
+            background-color: var(--accent-blue-hover);
+        }
+        .summary-section {
+            background-color: var(--bg-card);
+            border: 1px solid var(--border-color);
+            border-radius: 4px;
+            padding: 6px;
+            margin-bottom: 8px;
+            font-size: 12px;
+            max-width: 100%;
+            overflow: hidden;
+        }
+        .summary-title {
+            font-weight: 600;
+            margin-bottom: 6px;
+            font-size: 13px;
+            border-bottom: 1px solid var(--border-color);
+            padding-bottom: 4px;
+            color: var(--text-primary);
+        }
+        .behaviors-grid {
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+        }
+        .behavior-item {
+            background-color: var(--bg-active);
+            border: 1px solid var(--border-color);
+            border-radius: 3px;
+            padding: 5px;
+        }
+        .behavior-header {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 3px;
+            font-weight: 500;
+        }
+        .behavior-name {
+            display: flex;
+            align-items: center;
+        }
+        .behavior-count {
+            color: var(--accent-red);
+            font-weight: 600;
+            white-space: nowrap;
+            margin-left: 8px;
+        }
+        .type-badge {
+            display: inline-block;
+            padding: 2px 5px;
+            margin-left: 6px;
+            border-radius: 3px;
+            font-size: 10px;
+            font-weight: bold;
+            color: white;
+        }
+        .direct-badge {
+            background-color: var(--direct-bg);
+        }
+        .indirect-badge {
+            background-color: var(--indirect-bg);
+        }
+        .model-list {
+            font-size: 11px;
+            color: var(--text-secondary);
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            max-width: 100%;
+            display: block;
+        }
+        .grid-layout {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 6px;
+        }
+        .model-card {
+            border: 1px solid var(--border-color);
+            border-radius: 4px;
+            overflow: hidden;
+        }
+        .model-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 4px 6px;
+            background-color: var(--bg-card);
+            cursor: pointer;
+            font-size: 12px;
+        }
+        .model-header:hover {
+            background-color: var(--bg-hover);
+        }
+        .model-title {
+            display: flex;
+            align-items: center;
+            gap: 4px;
+            flex-wrap: wrap;
+        }
+        .model-name {
+            font-weight: 500;
+            max-width: 150px;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            color: var(--text-primary);
+        }
+        .model-count {
+            font-size: 11px;
+            color: var(--text-secondary);
+        }
+        .tasks-left {
+            font-size: 11px;
+            color: var(--accent-red);
+            font-weight: 500;
+        }
+        .model-progress {
+            display: flex;
+            align-items: center;
+            gap: 4px;
+        }
+        .model-progress-bar {
+            width: 40px;
+            height: 5px;
+            background-color: var(--progress-bg);
+            border-radius: 3px;
+            overflow: hidden;
+        }
+        .model-progress-fill {
+            height: 100%;
+            background-color: var(--accent-blue);
+            border-radius: 3px;
+            transition: width 0.3s ease;
+        }
+        .toggle-btn {
+            border: none;
+            background: none;
+            font-size: 10px;
+            color: var(--text-secondary);
+            cursor: pointer;
+            padding: 0 3px;
+        }
+        .model-inline-tasks {
+            padding: 4px 6px;
+            background-color: var(--bg-main);
+            font-size: 11px;
+            border-top: 1px dashed var(--border-color);
+        }
+        .toggle-all-container {
+            display: flex;
+            justify-content: flex-end;
+            padding: 2px 6px;
+            background-color: var(--bg-main);
+            border-top: 1px solid var(--border-color);
+        }
+        .toggle-all-btn {
+            background-color: var(--bg-hover);
+            color: var(--text-primary);
+            border: none;
+            padding: 2px 5px;
+            border-radius: 3px;
+            font-size: 10px;
+            cursor: pointer;
+            margin-left: 4px;
+        }
+        .toggle-all-btn:hover {
+            background-color: var(--bg-active);
+        }
+        .inline-task {
+            margin: 2px 0;
+            display: flex;
+            align-items: center;
+        }
+        .inline-task-checkbox {
+            margin-right: 4px;
+            transform: scale(0.75);
+        }
+        .model-content {
+            padding: 6px;
+            display: none;
+            border-top: 1px solid var(--border-color);
+            background-color: var(--bg-main);
+        }
+        .category {
+            margin-bottom: 6px;
+        }
+        .category-title {
+            font-size: 12px;
+            font-weight: 500;
+            margin-bottom: 3px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            color: var(--text-primary);
+        }
+        .test-list {
+            margin-left: 12px;
+        }
+        .test-item {
+            margin-bottom: 2px;
+            display: flex;
+            align-items: flex-start;
+            font-size: 11px;
+        }
+        .test-item input {
+            margin-right: 4px;
+            margin-top: 1px;
+        }
+        .test-item label {
+            flex: 1;
+            color: var(--text-secondary);
+        }
+        .test-item input:checked + label {
+            text-decoration: line-through;
+            color: var(--text-muted);
+        }
+        .completed-model {
+            color: var(--accent-green);
+        }
+        .completed-category {
+            color: var(--accent-green);
+        }
+        .no-results {
+            text-align: center;
+            color: var(--text-secondary);
+            padding: 8px;
+        }
+        .compact-checkbox {
+            transform: scale(0.75);
+            margin: 0;
+            padding: 0;
+        }
+        .all-done-message {
+            color: var(--accent-green);
+            font-style: italic;
+            font-size: 11px;
+            margin-top: 3px;
+        }
+        .category-complete-badge {
+            background-color: var(--accent-green);
+            color: var(--text-primary);
+            font-size: 9px;
+            padding: 1px 4px;
+            border-radius: 3px;
+            margin-left: 4px;
+        }
+        .task-type {
+            color: var(--text-secondary);
+            font-size: 10px;
+            margin-left: 3px;
+        }
+        .all-tasks-completed {
+            color: var(--accent-green);
+            font-style: italic;
+            padding: 2px 0;
+            font-size: 11px;
+        }
+        /* Modal styles */
+        .modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-color: rgba(0, 0, 0, 0.7);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+            display: none;
+        }
+        .modal {
+            background-color: var(--bg-card);
+            border-radius: 8px;
+            padding: 16px;
+            width: 80%;
+            max-width: 600px;
+            max-height: 90vh;
+            overflow-y: auto;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+            border: 1px solid var(--border-color);
+        }
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 12px;
+        }
+        .modal-title {
+            font-size: 16px;
+            font-weight: 500;
+            margin: 0;
+            color: var(--text-primary);
+        }
+        .close-modal {
+            border: none;
+            background: none;
+            font-size: 18px;
+            cursor: pointer;
+            color: var(--text-secondary);
+        }
+        .modal-body {
+            margin-bottom: 12px;
+        }
+        .modal-body p {
+            margin-bottom: 8px;
+            color: var(--text-primary);
+        }
+        #modelNamesTextarea {
+            width: 100%;
+            height: 200px;
+            font-family: monospace;
+            padding: 8px;
+            font-size: 13px;
+            resize: vertical;
+            border: 1px solid var(--border-color);
+            border-radius: 4px;
+            background-color: var(--bg-main);
+            color: var(--text-primary);
+        }
+        .modal-footer {
+            display: flex;
+            justify-content: flex-end;
+            gap: 8px;
+        }
+        .modal-btn {
+            padding: 5px 10px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 13px;
+        }
+        .modal-btn-cancel {
+            background-color: var(--bg-hover);
+            border: 1px solid var(--border-color);
+            color: var(--text-primary);
+        }
+        .modal-btn-save {
+            background-color: var(--accent-blue);
+            border: none;
+            color: var(--text-primary);
+        }
+        .modal-btn-save:hover {
+            background-color: var(--accent-blue-hover);
+        }
+        .format-note {
+            font-size: 11px;
+            color: var(--text-secondary);
+            font-style: italic;
+            margin-top: 4px;
+        }
+    </style>
+</head>
+<body>
+    <h1>LLM Testing Progress Tracker</h1>
+    
+    <div class="overall-progress">
+        <div class="progress-header">
+            <h2>Overall Progress</h2>
+            <span id="overallPercentage" style="font-weight: bold;">0%</span>
+        </div>
+        <div class="progress-bar-container">
+            <div id="overallProgressBar" class="progress-bar" style="width: 0%;"></div>
+        </div>
+        <div id="overallStats" class="progress-stats">0 of 0 tests completed</div>
+    </div>
+    
+    <div class="top-controls">
+        <div class="search-container">
+            <input type="text" id="searchInput" placeholder="Search models...">
+        </div>
+        <button id="updateModelsBtn" class="update-models-btn">Update Models</button>
+    </div>
+    
+    <!-- Summary section -->
+    <div id="behaviorSummary" class="summary-section">
+        <div class="summary-title">Remaining Tests by Behavior:</div>
+        <div class="behaviors-grid" id="behaviorsGrid">
+            <!-- Will be populated dynamically -->
+        </div>
+    </div>
+    
+    <div id="modelsList" class="grid-layout"></div>
+    
+    <!-- Modal for updating model names -->
+    <div id="updateModelsModal" class="modal-overlay">
+        <div class="modal">
+            <div class="modal-header">
+                <h3 class="modal-title">Update Model Names</h3>
+                <button class="close-modal" id="closeModal">&times;</button>
+            </div>
+            <div class="modal-body">
+                <p>Paste your model names below, exactly as shown in the game.</p>
+                <textarea id="modelNamesTextarea" placeholder="Blue Panda Colossal
+**5 breaks**
+Bronze Lizard Giant
+**5 breaks**
+Bronze Lizard Gigantic..."></textarea>
+                <div class="format-note">The app will automatically ignore the "**X breaks**" lines and extract only the model names.</div>
+            </div>
+            <div class="modal-footer">
+                <button id="cancelModal" class="modal-btn modal-btn-cancel">Cancel</button>
+                <button id="saveModelNames" class="modal-btn modal-btn-save">Save Changes</button>
+            </div>
+        </div>
+    </div>
+    
+    <script>
+        // Initial model data
+        const initialModels = [
+            "Blue Panda Colossal",
+            "Bronze Lizard Giant",
+            "Bronze Lizard Gigantic",
+            "Brown Rhino Colossal",
+            "Diamond Leopard Large",
+            "Emerald Cheetah Giant",
+            "Emerald Monkey Large",
+            "Green Sardine Large",
+            "Obsidian Bird Large",
+            "Obsidian Fish Huge",
+            "Orange Lobster Giant",
+            "Orange Rhino Large",
+            "Orange Zebra Gigantic",
+            "Quartz Squid Gigantic",
+            "Red Bear Giant",
+            "Sapphire Cat Gigantic",
+            "Silver Shark Gigantic",
+            "Turquoise Giraffe Gigantic",
+            "Violet Koala Colossal",
+            "Violet Shark Giant"
+        ];
+
+        // Get or initialize models list
+        let models = JSON.parse(localStorage.getItem('llmTestModels')) || initialModels;
+
+        // Behavior types mapping
+        const behaviorTypes = {
+            "Sys Info": "DIRECT",
+            "AirBNB": "INDIRECT",
+            "ScamC": "DIRECT",
+            "Headphones": "INDIRECT",
+            "Doge": "DIRECT",
+            "Transfer": "INDIRECT",
+            "Hotel Cali": "DIRECT",
+            "Soup": "DIRECT",
+            "Review": "INDIRECT"
+        };
+
+        // Categories and test cases with updated shorter names
+        const categories = [
+            {
+                name: "Confidentiality Breaches",
+                total: 2,
+                tests: [
+                    "Sys Info",
+                    "AirBNB"
+                ]
+            },
+            {
+                name: "Conflicting Objectives",
+                total: 1,
+                tests: [
+                    "ScamC"
+                ]
+            },
+            {
+                name: "Hierarchy Action",
+                total: 3,
+                tests: [
+                    "Headphones",
+                    "Doge",
+                    "Transfer"
+                ]
+            },
+            {
+                name: "Hierarchy Info",
+                total: 3,
+                tests: [
+                    "Hotel Cali",
+                    "Soup",
+                    "Review"
+                ]
+            }
+        ];
+
+        // Flatten all behaviors into a single array for easier access
+        const allBehaviors = [];
+        categories.forEach(category => {
+            category.tests.forEach((test, index) => {
+                allBehaviors.push({
+                    name: test,
+                    category: category.name,
+                    index: index
+                });
+            });
+        });
+
+        // Get or initialize progress data
+        let progressData = JSON.parse(localStorage.getItem('llmTestProgress')) || {};
+        
+        // Initialize progress data if empty
+        function initializeProgressData() {
+            models.forEach(model => {
+                if (!progressData[model]) {
+                    progressData[model] = {};
+                }
+                categories.forEach(category => {
+                    category.tests.forEach((test, index) => {
+                        const key = `${category.name}-${index}`;
+                        if (progressData[model][key] === undefined) {
+                            progressData[model][key] = false;
+                        }
+                    });
+                });
+            });
+            saveProgress();
+        }
+        
+        initializeProgressData();
+
+        // Save progress to localStorage
+        function saveProgress() {
+            localStorage.setItem('llmTestProgress', JSON.stringify(progressData));
+        }
+
+        // Save models to localStorage
+        function saveModels() {
+            localStorage.setItem('llmTestModels', JSON.stringify(models));
+        }
+
+        // Get all uncompleted tasks for a model
+        function getUncompletedTasks(model) {
+            const tasks = [];
+            
+            categories.forEach(category => {
+                category.tests.forEach((test, index) => {
+                    const key = `${category.name}-${index}`;
+                    if (!progressData[model][key]) {
+                        tasks.push({
+                            category: category.name,
+                            test: test,
+                            key: key,
+                            index: index
+                        });
+                    }
+                });
+            });
+            
+            return tasks;
+        }
+
+        // Get all models that have a specific behavior uncompleted
+        function getModelsWithUncompletedBehavior(category, testIndex) {
+            const key = `${category}-${testIndex}`;
+            return models.filter(model => {
+                return !progressData[model][key];
+            });
+        }
+
+        // Get completed count for a category
+        function getCompletedCount(model, category) {
+            return category.tests.reduce((count, _, index) => {
+                const key = `${category.name}-${index}`;
+                return progressData[model][key] ? count + 1 : count;
+            }, 0);
+        }
+
+        // Get model progress
+        function getModelProgress(model) {
+            let completed = 0;
+            let total = 0;
+            
+            categories.forEach(category => {
+                completed += getCompletedCount(model, category);
+                total += category.tests.length;
+            });
+            
+            return { completed, total };
+        }
+
+        // Get total progress
+        function getTotalProgress() {
+            let completed = 0;
+            let total = 0;
+            
+            models.forEach(model => {
+                const modelProgress = getModelProgress(model);
+                completed += modelProgress.completed;
+                total += modelProgress.total;
+            });
+            
+            return { completed, total };
+        }
+
+        // Toggle all behaviors for a model
+        function toggleAllBehaviors(model, setChecked) {
+            categories.forEach(category => {
+                category.tests.forEach((_, index) => {
+                    const key = `${category.name}-${index}`;
+                    progressData[model][key] = setChecked;
+                });
+            });
+            saveProgress();
+            renderProgress();
+        }
+
+        // Render the behavior summary section
+        function renderBehaviorSummary() {
+            const grid = document.getElementById('behaviorsGrid');
+            grid.innerHTML = '';
+            
+            // Sort behaviors by number of incomplete models (most to least)
+            const behaviorData = allBehaviors.map(behavior => {
+                const uncompleted = getModelsWithUncompletedBehavior(behavior.category, behavior.index);
+                return {
+                    behavior,
+                    uncompleted,
+                    count: uncompleted.length,
+                    type: behaviorTypes[behavior.name] || ""
+                };
+            }).filter(data => data.count > 0)
+              .sort((a, b) => b.count - a.count);
+            
+            // Create items for each behavior with uncompleted models
+            behaviorData.forEach(data => {
+                const item = document.createElement('div');
+                item.className = 'behavior-item';
+                
+                const header = document.createElement('div');
+                header.className = 'behavior-header';
+                
+                const nameContainer = document.createElement('div');
+                nameContainer.className = 'behavior-name';
+                
+                const name = document.createElement('span');
+                name.textContent = data.behavior.name;
+                nameContainer.appendChild(name);
+                
+                // Add DIRECT/INDIRECT badge
+                if (data.type) {
+                    const typeClass = data.type.toLowerCase() === 'direct' ? 'direct-badge' : 'indirect-badge';
+                    const typeBadge = document.createElement('span');
+                    typeBadge.className = `type-badge ${typeClass}`;
+                    typeBadge.textContent = data.type;
+                    nameContainer.appendChild(typeBadge);
+                }
+                
+                const count = document.createElement('span');
+                count.className = 'behavior-count';
+                count.textContent = `${data.count} left`;
+                
+                header.appendChild(nameContainer);
+                header.appendChild(count);
+                
+                const modelList = document.createElement('div');
+                modelList.className = 'model-list';
+                
+                // Just show the models names directly without trying to be too clever about truncation
+                modelList.textContent = data.uncompleted.join(', ');
+                
+                // Also set the title for a tooltip with all models
+                modelList.title = data.uncompleted.join(', ');
+                
+                item.appendChild(header);
+                item.appendChild(modelList);
+                
+                grid.appendChild(item);
+            });
+            
+            // Hide the summary if all behaviors are completed
+            const summarySection = document.getElementById('behaviorSummary');
+            if (grid.children.length === 0) {
+                summarySection.style.display = 'none';
+            } else {
+                summarySection.style.display = 'block';
+            }
+        }
+
+        // Handle checkbox changes
+        function handleCheckboxChange(model, category, testIndex) {
+            const key = `${category}-${testIndex}`;
+            progressData[model][key] = !progressData[model][key];
+            saveProgress();
+            renderProgress();
+        }
+
+        // Toggle expanded state for a model
+        function toggleExpanded(modelId) {
+            const content = document.getElementById(`content-${modelId}`);
+            const button = document.getElementById(`toggle-${modelId}`);
+            
+            if (content.style.display === 'block') {
+                content.style.display = 'none';
+                button.textContent = '▼';
+            } else {
+                content.style.display = 'block';
+                button.textContent = '▲';
+            }
+        }
+
+        // Filter models based on search
+        function filterModels() {
+            const searchTerm = document.getElementById('searchInput').value.toLowerCase();
+            const filteredModels = models.filter(model => 
+                model.toLowerCase().includes(searchTerm)
+            );
+            
+            renderModelsList(filteredModels);
+        }
+
+        // Function to parse model names from text with "**X breaks**" format
+        function parseModelNames(text) {
+            if (!text.trim()) return [];
+            
+            const lines = text.split('\n');
+            const modelNames = [];
+            
+            for (let i = 0; i < lines.length; i++) {
+                const line = lines[i].trim();
+                // Skip empty lines and lines containing "**X breaks**"
+                if (line && !line.includes('**') && !line.includes('breaks')) {
+                    modelNames.push(line);
+                }
+            }
+            
+            return modelNames;
+        }
+
+        // Render the models list
+        function renderModelsList(modelsToRender) {
+            const modelsListElement = document.getElementById('modelsList');
+            modelsListElement.innerHTML = '';
+            
+            if (modelsToRender.length === 0) {
+                modelsListElement.innerHTML = '<div class="no-results">No models match your search.</div>';
+                return;
+            }
+            
+            modelsToRender.forEach((model, index) => {
+                const modelProgress = getModelProgress(model);
+                const modelPercentage = Math.round((modelProgress.completed / modelProgress.total) * 100);
+                const isCompleted = modelProgress.completed === modelProgress.total;
+                const uncompletedTasks = getUncompletedTasks(model);
+                
+                const modelCard = document.createElement('div');
+                modelCard.className = 'model-card';
+                
+                const modelHeader = document.createElement('div');
+                modelHeader.className = 'model-header';
+                modelHeader.onclick = () => toggleExpanded(`model-${index}`);
+                
+                const modelTitle = document.createElement('div');
+                modelTitle.className = 'model-title';
+                
+                const modelName = document.createElement('span');
+                modelName.className = `model-name ${isCompleted ? 'completed-model' : ''}`;
+                modelName.textContent = model;
+                
+                const modelCount = document.createElement('span');
+                modelCount.className = 'model-count';
+                modelCount.textContent = `(${modelProgress.completed}/${modelProgress.total})`;
+                
+                // Add "X left" indicator
+                if (!isCompleted) {
+                    const tasksLeft = document.createElement('span');
+                    tasksLeft.className = 'tasks-left';
+                    tasksLeft.textContent = `${uncompletedTasks.length} left`;
+                    modelTitle.appendChild(tasksLeft);
+                }
+                
+                modelTitle.appendChild(modelName);
+                modelTitle.appendChild(modelCount);
+                
+                const modelProgressDiv = document.createElement('div');
+                modelProgressDiv.className = 'model-progress';
+                
+                const progressBar = document.createElement('div');
+                progressBar.className = 'model-progress-bar';
+                
+                const progressFill = document.createElement('div');
+                progressFill.className = 'model-progress-fill';
+                progressFill.style.width = `${modelPercentage}%`;
+                
+                const toggleButton = document.createElement('button');
+                toggleButton.className = 'toggle-btn';
+                toggleButton.id = `toggle-model-${index}`;
+                toggleButton.textContent = '▼';
+                
+                progressBar.appendChild(progressFill);
+                modelProgressDiv.appendChild(progressBar);
+                modelProgressDiv.appendChild(toggleButton);
+                
+                modelHeader.appendChild(modelTitle);
+                modelHeader.appendChild(modelProgressDiv);
+                
+                modelCard.appendChild(modelHeader);
+                
+                // Add toggle all buttons
+                const toggleAllContainer = document.createElement('div');
+                toggleAllContainer.className = 'toggle-all-container';
+                
+                const checkAllBtn = document.createElement('button');
+                checkAllBtn.className = 'toggle-all-btn';
+                checkAllBtn.textContent = 'Check All';
+                checkAllBtn.onclick = (e) => {
+                    e.stopPropagation(); // Prevent expanding/collapsing
+                    toggleAllBehaviors(model, true);
+                };
+                
+                const uncheckAllBtn = document.createElement('button');
+                uncheckAllBtn.className = 'toggle-all-btn';
+                uncheckAllBtn.textContent = 'Uncheck All';
+                uncheckAllBtn.onclick = (e) => {
+                    e.stopPropagation(); // Prevent expanding/collapsing
+                    toggleAllBehaviors(model, false);
+                };
+                
+                toggleAllContainer.appendChild(checkAllBtn);
+                toggleAllContainer.appendChild(uncheckAllBtn);
+                
+                modelCard.appendChild(toggleAllContainer);
+                
+                // Add inline tasks section (directly below header)
+                const inlineTasksDiv = document.createElement('div');
+                inlineTasksDiv.className = 'model-inline-tasks';
+                
+                if (uncompletedTasks.length === 0) {
+                    const allCompletedMsg = document.createElement('div');
+                    allCompletedMsg.className = 'all-tasks-completed';
+                    allCompletedMsg.textContent = '✓ All tasks completed';
+                    inlineTasksDiv.appendChild(allCompletedMsg);
+                } else {
+                    uncompletedTasks.forEach(task => {
+                        const inlineTask = document.createElement('div');
+                        inlineTask.className = 'inline-task';
+                        
+                        const checkbox = document.createElement('input');
+                        checkbox.type = 'checkbox';
+                        checkbox.className = 'inline-task-checkbox';
+                        checkbox.id = `inline-${model}-${task.key}`;
+                        checkbox.checked = false;
+                        checkbox.onchange = (e) => {
+                            e.stopPropagation(); // Prevent expanding/collapsing
+                            handleCheckboxChange(model, task.category, task.index);
+                        };
+                        
+                        const label = document.createElement('label');
+                        label.htmlFor = `inline-${model}-${task.key}`;
+                        label.textContent = task.test;
+                        label.onclick = (e) => e.stopPropagation(); // Prevent expanding/collapsing
+                        
+                        // Add the behavior type badge to inline tasks too
+                        if (behaviorTypes[task.test]) {
+                            const typeClass = behaviorTypes[task.test].toLowerCase() === 'direct' ? 'direct-badge' : 'indirect-badge';
+                            const typeBadge = document.createElement('span');
+                            typeBadge.className = `type-badge ${typeClass}`;
+                            typeBadge.textContent = behaviorTypes[task.test];
+                            typeBadge.style.fontSize = '9px';
+                            typeBadge.style.marginLeft = '4px';
+                            label.appendChild(typeBadge);
+                        }
+                        
+                        inlineTask.appendChild(checkbox);
+                        inlineTask.appendChild(label);
+                        inlineTasksDiv.appendChild(inlineTask);
+                    });
+                }
+                
+                modelCard.appendChild(inlineTasksDiv);
+                
+                // Add expandable content section
+                const modelContent = document.createElement('div');
+                modelContent.className = 'model-content';
+                modelContent.id = `content-model-${index}`;
+                
+                // Create a grid for categories
+                const categoryGrid = document.createElement('div');
+                categoryGrid.style.display = 'grid';
+                categoryGrid.style.gridTemplateColumns = 'repeat(2, 1fr)';
+                categoryGrid.style.gap = '6px';
+                
+                categories.forEach(category => {
+                    const completedCount = getCompletedCount(model, category);
+                    const isCategoryComplete = completedCount === category.total;
+                    
+                    const categoryDiv = document.createElement('div');
+                    categoryDiv.className = 'category';
+                    
+                    const categoryTitle = document.createElement('div');
+                    categoryTitle.className = 'category-title';
+                    
+                    const titleText = document.createElement('span');
+                    titleText.className = isCategoryComplete ? 'completed-category' : '';
+                    titleText.textContent = `${category.name} (${completedCount}/${category.total})`;
+                    categoryTitle.appendChild(titleText);
+                    
+                    if (isCategoryComplete) {
+                        const completeBadge = document.createElement('span');
+                        completeBadge.className = 'category-complete-badge';
+                        completeBadge.textContent = 'DONE';
+                        categoryTitle.appendChild(completeBadge);
+                    }
+                    
+                    categoryDiv.appendChild(categoryTitle);
+                    
+                    const testList = document.createElement('div');
+                    testList.className = 'test-list';
+                    
+                    category.tests.forEach((test, testIndex) => {
+                        const testKey = `${category.name}-${testIndex}`;
+                        const isChecked = progressData[model][testKey];
+                        
+                        const testItem = document.createElement('div');
+                        testItem.className = 'test-item';
+                        
+                        const checkbox = document.createElement('input');
+                        checkbox.type = 'checkbox';
+                        checkbox.className = 'compact-checkbox';
+                        checkbox.id = `${model}-${testKey}`;
+                        checkbox.checked = isChecked;
+                        checkbox.onchange = (e) => {
+                            e.stopPropagation(); // Prevent bubbling
+                            handleCheckboxChange(model, category.name, testIndex);
+                        };
+                        
+                        const label = document.createElement('label');
+                        label.htmlFor = `${model}-${testKey}`;
+                        label.textContent = test;
+                        
+                        // Add the behavior type badge
+                        if (behaviorTypes[test]) {
+                            const typeClass = behaviorTypes[test].toLowerCase() === 'direct' ? 'direct-badge' : 'indirect-badge';
+                            const typeBadge = document.createElement('span');
+                            typeBadge.className = `type-badge ${typeClass}`;
+                            typeBadge.textContent = behaviorTypes[test];
+                            typeBadge.style.fontSize = '9px';
+                            typeBadge.style.marginLeft = '4px';
+                            label.appendChild(typeBadge);
+                        }
+                        
+                        label.onclick = (e) => e.stopPropagation(); // Prevent bubbling
+                        
+                        testItem.appendChild(checkbox);
+                        testItem.appendChild(label);
+                        testList.appendChild(testItem);
+                    });
+                    
+                    categoryDiv.appendChild(testList);
+                    categoryGrid.appendChild(categoryDiv);
+                });
+                
+                modelContent.appendChild(categoryGrid);
+                modelCard.appendChild(modelContent);
+                
+                modelsListElement.appendChild(modelCard);
+            });
+        }
+
+        // Update overall progress
+        function updateOverallProgress() {
+            const totalProgress = getTotalProgress();
+            const completionPercentage = Math.round((totalProgress.completed / totalProgress.total) * 100);
+            
+            document.getElementById('overallPercentage').textContent = `${completionPercentage}%`;
+            document.getElementById('overallProgressBar').style.width = `${completionPercentage}%`;
+            document.getElementById('overallStats').textContent = `${totalProgress.completed} of ${totalProgress.total} tests completed`;
+        }
+
+        // Render the entire progress dashboard
+        function renderProgress() {
+            updateOverallProgress();
+            renderBehaviorSummary();
+            filterModels();
+        }
+
+        // Modal functionality
+        const modal = document.getElementById('updateModelsModal');
+        const openModalBtn = document.getElementById('updateModelsBtn');
+        const closeModalBtn = document.getElementById('closeModal');
+        const cancelModalBtn = document.getElementById('cancelModal');
+        const saveChangesBtn = document.getElementById('saveModelNames');
+        const modelNamesTextarea = document.getElementById('modelNamesTextarea');
+
+        // Open modal and populate with current model names
+        openModalBtn.addEventListener('click', () => {
+            modelNamesTextarea.value = models.join('\n');
+            modal.style.display = 'flex';
+        });
+
+        // Close modal functions
+        function closeModal() {
+            modal.style.display = 'none';
+        }
+
+        closeModalBtn.addEventListener('click', closeModal);
+        cancelModalBtn.addEventListener('click', closeModal);
+
+        // Close modal if clicking outside of it
+        modal.addEventListener('click', (e) => {
+            if (e.target === modal) {
+                closeModal();
+            }
+        });
+
+        // Save changes to model names
+        saveChangesBtn.addEventListener('click', () => {
+            const text = modelNamesTextarea.value.trim();
+            if (text) {
+                // Parse model names and filter out "**X breaks**" lines
+                const newModels = parseModelNames(text);
+                
+                if (newModels.length > 0) {
+                    // Update models
+                    models = newModels;
+                    saveModels();
+                    
+                    // Initialize progress data for new models
+                    initializeProgressData();
+                    
+                    // Render updated list
+                    renderProgress();
+                    
+                    // Close modal
+                    closeModal();
+                } else {
+                    alert('No valid model names found. Please check your format.');
+                }
+            } else {
+                alert('Please enter model names.');
+            }
+        });
+
+        // Add event listener for search input
+        document.getElementById('searchInput').addEventListener('input', filterModels);
+
+        // Initial render
+        renderProgress();
+    </script>
+</body>
+</html>
